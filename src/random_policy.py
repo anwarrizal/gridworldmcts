@@ -1,3 +1,10 @@
+"""
+Random policy implementations with heuristic improvements.
+
+Provides policies that select actions randomly but with additional heuristics
+to improve exploration efficiency.
+"""
+
 import random
 from typing import Generic, TypeVar
 
@@ -25,8 +32,7 @@ class RandomMinHeuristicPolicy(Generic[A, S], Policy[A, S]):
         opposite_actions: dict[A, A],
         rnd: random.Random | None = None,
     ):
-        """
-        Initialize the random policy with minimum heuristic.
+        """Initialize the random policy with minimum heuristic.
 
         Args:
             possible_actions: List of all possible actions
@@ -40,15 +46,16 @@ class RandomMinHeuristicPolicy(Generic[A, S], Policy[A, S]):
 
     def get_next_action(
         self,
-        state: S,
+        step: int | None = None,
+        state: State | None = None,
         previous_state: S | None = None,
         previous_action: A | None = None,
     ) -> A:
-        """
-        Determine the next action randomly, but avoid taking the opposite
+        """Determine the next action randomly, but avoid taking the opposite
         of the previous action unless the agent didn't move.
 
         Args:
+            step: The step id
             state: The current state
             previous_state: The previous state, if available
             previous_action: The previous action taken, if available
@@ -56,10 +63,8 @@ class RandomMinHeuristicPolicy(Generic[A, S], Policy[A, S]):
         Returns:
             The action to take
         """
-        # Get all possible actions
-        possible_actions = self.possible_actions.copy()
-
         # If we have a previous action and the agent moved, remove the opposite action
+        possible_actions = self.possible_actions.copy()
         if previous_action is not None and (
             previous_state is None or previous_state != state
         ):

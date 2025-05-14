@@ -1,11 +1,9 @@
-"""
-Episode runner for sequential decision-making environments.
+"""Episode runner for sequential decision-making environments.
 
 Simulates agent-environment interactions, tracking states, actions, and rewards.
 """
 
 import logging
-import sys
 import time
 from environment_model import Action, State, World
 from policy import Policy
@@ -17,27 +15,18 @@ logger.setLevel(logging.NOTSET)
 
 
 class Episode:
-    """
-    Manages the execution of an agent in an environment.
+    """Manages the execution of an agent in an environment.
 
     Simulates agent-environment interactions using a policy for action selection.
     """
 
-    def __init__(
-        self,
-        world: World,
-        initial_state: State,
-        policy: Policy,
-        prob_matrix: dict[tuple[State, State], float] | None = None,
-    ):
-        """
-        Initialize an episode.
+    def __init__(self, world: World, initial_state: State, policy: Policy):
+        """Initialize an episode.
 
         Args:
             world: Environment model
             initial_state: Starting state
             policy: Action selection strategy
-            prob_matrix: Optional transition probability matrix
         """
         self.policy = policy
         self.world = world
@@ -71,7 +60,12 @@ class Episode:
             step_start_time = time.time()
 
             # Get the next action from the policy
-            action = self.policy.get_next_action(total_steps, state, previous_action)
+            action = self.policy.get_next_action(
+                total_steps,
+                state=state,
+                previous_state=previous_state,
+                previous_action=previous_action,
+            )
 
             # Apply the action to get the new state and reward
             new_state, reward = self.world.apply_transition(state, action)
@@ -95,13 +89,15 @@ class Episode:
             # Calculate and log step time
             step_time = time.time() - step_start_time
             logger.info(
-                f"{{ 'action':'{action.name()}','state':{state.name()},'rewards':{reward},'total_rewards':{total_rewards},'step time':{step_time:.4f}s }}"
+                f"{{ 'action':'{action.name()}','state':{state.name()},'rewards':{reward},"
+                f"'total_rewards':{total_rewards},'step time':{step_time:.4f}s }}"
             )
 
         # Calculate and log total episode time
         episode_time = time.time() - episode_start_time
         logger.info(
-            f"Episode completed in {episode_time:.4f}s, {total_steps} steps, avg {episode_time/max(1, total_steps):.4f}s per step"
+            f"Episode completed in {episode_time:.4f}s, {total_steps} "
+            f"steps, avg {episode_time/max(1, total_steps):.4f}s per step"
         )
 
         # Return success status, steps taken, total rewards, and the path

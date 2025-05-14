@@ -1,5 +1,4 @@
-"""
-Monte Carlo Tree Search (MCTS) implementation.
+"""Monte Carlo Tree Search (MCTS) implementation.
 
 This module provides a generic implementation of the Monte Carlo Tree Search algorithm
 for decision-making in sequential environments. MCTS builds a search tree through
@@ -18,7 +17,6 @@ from typing import Generic, TypeVar
 
 from environment_model import State, Action, World
 from policy import Policy
-from random_policy import RandomMinHeuristicPolicy
 
 # Module logger
 logger = logging.getLogger(__name__)
@@ -31,16 +29,14 @@ S = TypeVar("S", bound=State)
 
 
 class MCTSActionNode(Generic[A, S]):
-    """
-    Represents an action node in the Monte Carlo Tree Search.
+    """Represents an action node in the Monte Carlo Tree Search.
 
     An action node is associated with a specific action and connects
     parent state nodes to child state nodes.
     """
 
     def __init__(self, action: A, parent_state: "MCTSStateNode[A, S]"):
-        """
-        Initialize an action node.
+        """Initialize an action node.
 
         Args:
             action: The action this node represents
@@ -55,8 +51,7 @@ class MCTSActionNode(Generic[A, S]):
         self.value = 0.0
 
     def add_child_state(self, state: S, state_node: "MCTSStateNode[A, S]") -> None:
-        """
-        Add a child state node.
+        """Add a child state node.
 
         Args:
             state: The state
@@ -65,8 +60,7 @@ class MCTSActionNode(Generic[A, S]):
         self.child_states[state] = state_node
 
     def find_child_state(self, state: S) -> "MCTSStateNode[A, S]|None":
-        """
-        Find a child state node by state.
+        """Find a child state node by state.
 
         Args:
             state: The state to find
@@ -77,8 +71,7 @@ class MCTSActionNode(Generic[A, S]):
         return self.child_states.get(state)
 
     def update(self, reward: float) -> None:
-        """
-        Update the statistics for this action node.
+        """Update the statistics for this action node.
 
         Args:
             reward: The reward received
@@ -87,8 +80,7 @@ class MCTSActionNode(Generic[A, S]):
         self.value += reward
 
     def get_ucb1_value(self, exploration_weight: float = 0) -> float:
-        """
-        Calculate the UCB1 value for this action node.
+        """Calculate the UCB1 value for this action node.
 
         Args:
             exploration_weight: The exploration weight parameter
@@ -102,7 +94,7 @@ class MCTSActionNode(Generic[A, S]):
         # Get the parent state's visit count
         parent_visits = self.parent_state.visits
 
-        if parent_visits == 0:
+        if (parent_visits := self.parent_state.visits) == 0:
             raise ValueError("Cannot compute UCB1 value when parent visit  = 0")
 
         # Calculate UCB1
@@ -114,8 +106,7 @@ class MCTSActionNode(Generic[A, S]):
         return exploitation + exploration, exploration, exploitation
 
     def __repr__(self) -> str:
-        """
-        Get a string representation of this action node.
+        """Get a string representation of this action node.
 
         Returns:
             A string representation including action, visits, and value
@@ -125,8 +116,7 @@ class MCTSActionNode(Generic[A, S]):
 
 
 class MCTSStateNode(Generic[A, S]):
-    """
-    Represents a state node in the Monte Carlo Tree Search.
+    """Represents a state node in the Monte Carlo Tree Search.
 
     A state node is associated with a specific state and connects
     parent action nodes to child action nodes. A state node can have
@@ -134,8 +124,7 @@ class MCTSStateNode(Generic[A, S]):
     """
 
     def __init__(self, state: S, untried_actions: list[A]):
-        """
-        Initialize a state node.
+        """Initialize a state node.
 
         Args:
             state: The state this node represents
@@ -151,8 +140,7 @@ class MCTSStateNode(Generic[A, S]):
         self.untried_actions = untried_actions
 
     def add_child_action(self, action: A) -> "MCTSActionNode[A, S]":
-        """
-        Add a child action node.
+        """Add a child action node.
 
         Args:
             action: The action
@@ -165,8 +153,7 @@ class MCTSStateNode(Generic[A, S]):
         return action_node
 
     def is_fully_expanded(self) -> bool:
-        """
-        Check if all possible actions have been tried.
+        """Check if all possible actions have been tried.
 
         Returns:
             True if all actions have been tried, False otherwise
@@ -174,8 +161,7 @@ class MCTSStateNode(Generic[A, S]):
         return not self.untried_actions
 
     def select_best_action(self, exploration_weight: float) -> "MCTSActionNode[A, S]":
-        """
-        Select the best action based on UCB1 values.
+        """Select the best action based on UCB1 values.
 
         Args:
             exploration_weight: The exploration weight parameter
@@ -189,8 +175,7 @@ class MCTSStateNode(Generic[A, S]):
         )
 
     def update(self, reward: float) -> None:
-        """
-        Update the statistics for this state node.
+        """Update the statistics for this state node.
 
         Args:
             reward: The reward received
@@ -199,19 +184,20 @@ class MCTSStateNode(Generic[A, S]):
         self.value += reward
 
     def __repr__(self) -> str:
-        """
-        Get a string representation of this state node.
+        """Get a string representation of this state node.
 
         Returns:
             A string representation including state, visits, and number of child actions
         """
         avg_value = self.value / self.visits if self.visits > 0 else 0.0
-        return f"StateNode({self.state}, visits={self.visits}, value={self.value:.2f}, avg={avg_value:.2f}, actions={len(self.child_actions)})"
+        return (
+            f"StateNode({self.state}, visits={self.visits}, value={self.value:.2f}, "
+            f"avg={avg_value:.2f}, actions={len(self.child_actions)})"
+        )
 
 
 def path_to_string(path: list[tuple[MCTSActionNode[A, S], MCTSStateNode[A, S]]]) -> str:
-    """
-    Convert a path to a string representation.
+    """Convert a path to a string representation.
 
     Args:
         path: The path to convert
@@ -227,8 +213,7 @@ def path_to_string(path: list[tuple[MCTSActionNode[A, S], MCTSStateNode[A, S]]])
 
 
 class MCTS(Generic[A, S]):
-    """
-    Monte Carlo Tree Search algorithm implementation.
+    """Monte Carlo Tree Search algorithm implementation.
 
     This class implements the Monte Carlo Tree Search algorithm for decision making
     in sequential environments. It builds a search tree by iteratively selecting,
@@ -300,7 +285,7 @@ class MCTS(Generic[A, S]):
                 _, reward = self.world.apply_transition(state.state, action.action)
             else:
                 reward, simulated_path = self._simulate(
-                    i, node.state, self.simulation_policy
+                    node.state, self.simulation_policy
                 )
                 logger.debug(f"Simulate on {node.state.name()}.")
                 res = ",".join(
@@ -360,13 +345,15 @@ class MCTS(Generic[A, S]):
             child_ucb1 = [
                 (
                     c.action.name(),
-                    f"{c.get_ucb1_value(self.exploration_weight)[0]:.2f},{c.visits}",
+                    f"{c.get_ucb1_value(self.exploration_weight)[0]:.2f},{c.visits},{c.value}",
                 )
                 for c in current.child_actions.values()
             ]
             action_node = current.select_best_action(self.exploration_weight)
 
-            logger.debug(f"Select {action_node.action.name()} from {child_ucb1}")
+            logger.debug(
+                f"{step_id}.{simulation_id}.{depth} Select {action_node.action.name()} from {child_ucb1}"
+            )
 
             # Get the next state using the policy
             next_state, _ = self.world.apply_transition(
@@ -375,7 +362,9 @@ class MCTS(Generic[A, S]):
             depth = depth + 1
             # Get or create the corresponding state node
             if not (next_node := action_node.find_child_state(next_state)):
-                next_node = MCTSStateNode(next_state)
+                next_node = MCTSStateNode(
+                    next_state, self.world.get_legal_actions(next_state)
+                )
                 action_node.add_child_state(next_state, next_node)
                 # Initialize untried actions for the new node
                 next_node.untried_actions = self.world.get_legal_actions(next_state)
@@ -389,10 +378,8 @@ class MCTS(Generic[A, S]):
             current.state
         ):
             # Choose a random untried action
-            len_before = len(current.untried_actions)
             action = self.rnd.choice(current.untried_actions)
             current.untried_actions.remove(action)
-            len_after = len(current.untried_actions)
 
             # Create a new action node
             action_node = current.add_child_action(action)
@@ -404,6 +391,7 @@ class MCTS(Generic[A, S]):
 
             # Create a new state node if needed
             if not (next_node := action_node.find_child_state(next_state)):
+
                 next_node = MCTSStateNode(
                     next_state, self.world.get_legal_actions(next_state)
                 )
@@ -413,7 +401,8 @@ class MCTS(Generic[A, S]):
 
             current = next_node
             logger.debug(
-                f"Expand {action_node.action.name() if action_node else 'None'}-{path_to_string(path)} {depth=}. Current={current.state.name()}"
+                f"Expand {action_node.action.name() if action_node else 'None'}-{path_to_string(path)} "
+                f"{depth=}. Current={current.state.name()}"
             )
 
             # Add this step to the path
@@ -422,7 +411,7 @@ class MCTS(Generic[A, S]):
         return current, path, action_node
 
     def _simulate(
-        self, sim: int, state: S, simulation_policy: Policy
+        self, state: S, simulation_policy: Policy
     ) -> tuple[float, list[tuple[A, S]]]:
         """Perform a rollout simulation from the given state using the simulation policy.
 
@@ -447,8 +436,7 @@ class MCTS(Generic[A, S]):
             not self.world.is_terminal(current_state) and depth < self.max_rollout_depth
         ):
             # Choose a random action
-            legal_actions = self.world.get_legal_actions(current_state)
-            if not legal_actions:
+            if not self.world.get_legal_actions(current_state):
                 break
 
             action = simulation_policy.get_next_action(

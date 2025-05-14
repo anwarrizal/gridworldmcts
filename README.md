@@ -27,10 +27,10 @@ cd gridworldmcts
 
 ### Basic Usage
 
-Run the default grid world example:
+Run with a grid file (required):
 
 ```bash
-python src/gridworld_mcts.py
+python src/gridworld_mcts.py --grid-file maze.txt
 ```
 
 ### Using a Grid File
@@ -50,10 +50,36 @@ Example:
 ####
 ```
 
-Run with the grid file:
+The grid file is required:
 
 ```bash
 python src/gridworld_mcts.py --grid-file maze.txt
+```
+
+### Using a Custom Probability Matrix
+
+Create a JSON file (e.g., `prob_matrix.json`) with a matrix defining action probabilities:
+
+```json
+[
+  [0.8, 0.1, 0.0, 0.1],
+  [0.1, 0.8, 0.1, 0.0],
+  [0.0, 0.1, 0.8, 0.1],
+  [0.1, 0.0, 0.1, 0.8]
+]
+```
+
+This matrix defines:
+- 80% chance the intended action succeeds
+- 10% chance of going perpendicular in each direction
+- 0% chance of going in the opposite direction
+
+For actions [UP, RIGHT, DOWN, LEFT], each row represents P(actual action | intended action).
+
+Run with the custom probability matrix:
+
+```bash
+python src/gridworld_mcts.py --prob-matrix-file prob_matrix.json
 ```
 
 ### Configuration
@@ -71,6 +97,7 @@ Create a JSON configuration file (e.g., `config.json`):
   "goal_reward": 500.0,
   "max_steps": 200,
   "grid_file": "maze.txt",
+  "prob_matrix_file": "prob_matrix.json",
   "seed": 42,
   "log_level": "INFO",
   "module_log_levels": {
@@ -97,6 +124,7 @@ python src/gridworld_mcts.py --config config.json --num-simulations 2000
 
 - `--config`: Path to configuration file
 - `--grid-file`: Path to grid file
+- `--prob-matrix-file`: Path to probability matrix file (JSON)
 - `--max-steps`: Maximum steps before termination
 - `--num-simulations`: MCTS simulations per decision
 - `--exploration-weight`: UCB1 exploration parameter

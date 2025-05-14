@@ -1,5 +1,4 @@
-"""
-GridWorld implementation using Monte Carlo Tree Search.
+"""GridWorld implementation using Monte Carlo Tree Search.
 
 This module demonstrates the application of MCTS to a GridWorld environment,
 providing functions to run episodes and visualize results.
@@ -11,20 +10,16 @@ import sys
 import os
 import json
 import argparse
-import gridworld
 from gridworld import (
     GridWorld,
-    GridAction,
     GridState,
     Coordinate,
     REVERSE_ACTIONS,
     STANDARD_ACTIONS,
     DefaultGridRewardPolicy,
 )
-from environment_model import Action, RewardPolicy, State
-from mcts import MCTS, MCTSStateNode, MCTSActionNode
+from environment_model import Action, State
 from mcts_policy import MCTSPolicy
-from policy import Policy
 from episode import Episode
 from random_policy import RandomMinHeuristicPolicy
 
@@ -41,9 +36,8 @@ root.addHandler(console_handler)
 logger = logging.getLogger(__name__)
 
 
-def setup_logging(log_level, module_levels=None):
-    """
-    Configure logging with the specified log level.
+def setup_logging(log_level: str, module_levels: dict | None = None):
+    """Configure logging with the specified log level.
 
     Args:
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) for root logger
@@ -78,9 +72,8 @@ def setup_logging(log_level, module_levels=None):
     logger.info(f"Root log level set to {log_level}")
 
 
-def load_config(config_file):
-    """
-    Load configuration from a JSON file.
+def load_config(config_file: str):
+    """Load configuration from a JSON file.
 
     Args:
         config_file: Path to the configuration file
@@ -97,7 +90,8 @@ def load_config(config_file):
         "increase_distance_penalty": -50.0,
         "same_distance_penalty": -10.0,
         "goal_reward": 1000.0,
-        "grid_file": None,
+        "grid_file": "",  # Will be overridden by required command-line argument
+        "prob_matrix_file": None,
         "seed": None,
         "log_level": "INFO",
         "module_log_levels": {
@@ -109,7 +103,7 @@ def load_config(config_file):
 
     if config_file and os.path.exists(config_file):
         try:
-            with open(config_file, "r") as f:
+            with open(config_file, "r", encoding="UTF-8") as f:
                 user_config = json.load(f)
                 # Update default config with user-provided values
                 default_config.update(user_config)
@@ -123,8 +117,7 @@ def load_config(config_file):
 def read_grid_from_file(
     filepath: str,
 ) -> tuple[list[list[int]], list[Coordinate], Coordinate]:
-    """
-    Read a grid matrix from a text file.
+    """Read a grid matrix from a text file.
 
     File format:
     - '#' represents walls (1)
@@ -143,7 +136,7 @@ def read_grid_from_file(
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"Grid file not found: {filepath}")
 
-    with open(filepath, "r") as f:
+    with open(filepath, "r", encoding="UTF-8") as f:
         lines = f.readlines()
 
     # Remove any trailing whitespace and filter out empty lines
@@ -191,25 +184,25 @@ def prepare_gridworld_with_mcts_episode(
     num_simulations: int = 60,
     max_rollout_depth: int = 20,
     seed: int | None = None,
+    prob_matrix:  list[list[float]] | None = None
 ) -> tuple[bool, int, float, list[tuple[Action, State]]]:
-    """
-    Run a GridWorld episode using MCTS for action selection.
+    """Run a GridWorld episode using MCTS for action selection.
 
     Args:
         grid_matrix: Grid representation (0=empty, 1=wall)
         destinations: Goal coordinates to reach
         start_position: Agent's starting position
-        max_steps: Maximum steps before termination
         exploration_weight: UCB1 exploration parameter
         num_simulations: MCTS simulations per decision
         max_rollout_depth: Maximum simulation depth
         seed: Random seed for reproducibility
+        prob_matrix: The probability matrix for the action
 
     Returns:
         (success, steps_taken, total_reward, action_state_path)
     """
     # Create the GridWorld
-    grid_world = GridWorld(grid_matrix, destinations)
+    grid_world = GridWorld(grid_matrix, destinations, action_prob_matrix=prob_matrix)
 
     rnd = random.Random(seed) if seed is not None else random.Random()
     # Create the MCTS policy
@@ -225,9 +218,7 @@ def prepare_gridworld_with_mcts_episode(
         rnd=rnd,
     )
     # Create an episode
-    episode = Episode(
-        grid_world, GridState(start_position), mcts_policy, start_position
-    )
+    episode = Episode(grid_world, GridState(start_position), mcts_policy)
 
     return grid_world, episode
 
@@ -235,8 +226,7 @@ def prepare_gridworld_with_mcts_episode(
 def visualize_path(
     grid_matrix: list[list[int]], path: list[Coordinate], destinations: list[Coordinate]
 ) -> None:
-    """
-    Display the agent's path through the grid world.
+    """Display the agent's path through the grid world.
 
     Args:
         grid_matrix: Grid representation (0=empty, 1=wall)
@@ -272,9 +262,9 @@ def visualize_path(
         logger.info(" ".join(str(cell) for cell in row))
 
 
+
 def parse_arguments():
-    """
-    Parse command line arguments.
+    """Parse command line arguments.
 
     Returns:
         Parsed arguments
@@ -284,7 +274,8 @@ def parse_arguments():
     )
 
     parser.add_argument("--config", type=str, help="Path to configuration file")
-    parser.add_argument("--grid-file", type=str, help="Path to grid file")
+    parser.add_argument("--grid-file", type=str, required=True, help="Path to grid file (required)")
+    parser.add_argument("--prob-matrix-file", type=str, help="Path to probability matrix file (JSON)")
     parser.add_argument(
         "--max-steps", type=int, help="Maximum steps before termination"
     )
@@ -338,11 +329,72 @@ def parse_arguments():
 
     return parser.parse_args()
 
+def load_probability_matrix(file_path: str) -> list[list[float]]:
+    """
+    Load a probability matrix from a JSON file.
+    
+    Args:
+        file_path: Path to the JSON file containing the probability matrix
+        
+    Returns:
+        A probability matrix as a list of lists of floats
+        
+    Raises:
+        FileNotFoundError: If the file doesn't exist
+        ValueError: If the matrix format is invalid
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Probability matrix file not found: {file_path}")
+    
+    try:
+        with open(file_path, 'r', encoding='UTF-8') as f:
+            matrix = json.load(f)
+        
+        # Validate matrix format
+        if not isinstance(matrix, list) or not all(isinstance(row, list) for row in matrix):
+            raise ValueError("Probability matrix must be a list of lists")
+        
+        # Validate that all rows have the same length
+        if len(set(len(row) for row in matrix)) > 1:
+            raise ValueError("All rows in the probability matrix must have the same length")
+        
+        # Validate that all values are probabilities
+        for row in matrix:
+            if not all(isinstance(p, (int, float)) and 0 <= p <= 1 for p in row):
+                raise ValueError("All values in the probability matrix must be between 0 and 1")
+            
+            # Check that probabilities sum to approximately 1
+            if not 0.99 <= sum(row) <= 1.01:
+                raise ValueError(f"Probabilities in each row must sum to 1, got {sum(row)}")
+        
+        return matrix
+    
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON format in probability matrix file: {e}")
+
+def create_noisy_action_matrix():
+    """
+    Create a probability matrix where:
+    - 80% chance the intended action succeeds
+    - 10% chance of going perpendicular in each direction
+    - 0% chance of going in the opposite direction
+    
+    For actions [UP, RIGHT, DOWN, LEFT], the matrix shows:
+    P(actual action | intended action)
+    
+    Returns:
+        A 4x4 probability matrix
+    """
+    # Order: [UP, RIGHT, DOWN, LEFT]
+    return [
+        [0.8, 0.1, 0.0, 0.1],  # Intended: UP
+        [0.1, 0.8, 0.1, 0.0],  # Intended: RIGHT
+        [0.0, 0.1, 0.8, 0.1],  # Intended: DOWN
+        [0.1, 0.0, 0.1, 0.8],  # Intended: LEFT
+    ]
 
 def main():
-    """
-    Run a demonstration of MCTS solving a GridWorld maze.
-    """
+    """Run a demonstration of MCTS solving a GridWorld maze."""
     # Parse command line arguments
     args = parse_arguments()
 
@@ -352,6 +404,8 @@ def main():
     # Override config with command line arguments if provided
     if args.grid_file:
         config["grid_file"] = args.grid_file
+    if args.prob_matrix_file:
+        config["prob_matrix_file"] = args.prob_matrix_file
     if args.max_steps is not None:
         config["max_steps"] = args.max_steps
     if args.num_simulations is not None:
@@ -374,7 +428,7 @@ def main():
         config["seed"] = args.seed
 
     # Handle module-specific log levels
-    if not "module_log_levels" in config:
+    if "module_log_levels" not in config:
         config["module_log_levels"] = {}
 
     if args.log_gridworld_mcts is not None:
@@ -390,35 +444,32 @@ def main():
     # Log the configuration
     logger.info(f"Running with configuration: {config}")
 
-    # Load grid from file or use default
-    if config["grid_file"]:
-        try:
-            grid_matrix, destinations, start_position = read_grid_from_file(
-                config["grid_file"]
-            )
-            logger.info(f"Loaded grid from {config['grid_file']}")
-            logger.info(f"Grid size: {len(grid_matrix)}x{len(grid_matrix[0])}")
-            logger.info(f"Start: {start_position}, Destinations: {destinations}")
-        except (FileNotFoundError, ValueError) as e:
-            logger.error(f"Error loading grid: {e}")
-            return
-    else:
-        # Example grid world (hardcoded)
-        grid_matrix = [
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
-            [0, 1, 0, 1, 0, 1, 0, 1, 0, 0],
-            [0, 1, 0, 1, 0, 1, 0, 0, 0, 1],
-            [0, 0, 0, 1, 0, 0, 0, 1, 1, 1],
-            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
-            [0, 0, 1, 0, 0, 1, 0, 1, 0, 1],
-            [0, 0, 1, 0, 0, 1, 0, 0, 0, 0],
-        ]
-        destinations = [(9, 9)]
-        start_position = (0, 0)
+    # Load grid from file (required)
+    try:
+        grid_matrix, destinations, start_position = read_grid_from_file(
+            config["grid_file"]
+        )
+        logger.info(f"Loaded grid from {config['grid_file']}")
+        logger.info(f"Grid size: {len(grid_matrix)}x{len(grid_matrix[0])}")
+        logger.info(f"Start: {start_position}, Destinations: {destinations}")
+    except (FileNotFoundError, ValueError) as e:
+        logger.error(f"Error loading grid: {e}")
+        return
 
+    # Load or create probability matrix
+    prob_matrix = None
+    if config.get("prob_matrix_file"):
+        try:
+            prob_matrix = load_probability_matrix(config["prob_matrix_file"])
+            logger.info(f"Loaded probability matrix from {config['prob_matrix_file']}")
+        except (FileNotFoundError, ValueError) as e:
+            logger.error(f"Error loading probability matrix: {e}")
+            logger.info("Using default noisy action matrix instead")
+            prob_matrix = create_noisy_action_matrix()
+    else:
+        logger.info("Using default noisy action matrix")
+        prob_matrix = create_noisy_action_matrix()
+    
     grid_world, episode = prepare_gridworld_with_mcts_episode(
         grid_matrix=grid_matrix,
         destinations=destinations,
@@ -427,6 +478,7 @@ def main():
         exploration_weight=config["exploration_weight"],
         max_rollout_depth=config["max_rollout_depth"],
         seed=config["seed"],
+        prob_matrix=prob_matrix
     )
 
     # Set reward policy with configured values

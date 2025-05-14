@@ -1,11 +1,9 @@
-"""
-GridWorld environment implementation.
+"""GridWorld environment implementation.
 
 Provides a 2D grid-based environment with obstacles, destinations, and movement actions.
 Includes state, action, and reward policy implementations for grid-based navigation.
 """
 
-from enum import Enum
 import random
 from mcts import World, Action, State
 from environment_model import RewardPolicy
@@ -15,15 +13,13 @@ Coordinate = tuple[int, int]
 
 
 class GridAction(Action):
-    """
-    Action in a grid world with directional movement.
+    """Action in a grid world with directional movement.
 
     Defined by a name and a movement vector (row_delta, col_delta).
     """
 
     def __init__(self, name: str, movement_vector: tuple[int, int]):
-        """
-        Initialize a grid action.
+        """Initialize a grid action.
 
         Args:
             name: Action name (e.g., "UP", "DOWN")
@@ -33,8 +29,7 @@ class GridAction(Action):
         self.movement_vector = movement_vector
 
     def get_movement_vector(self) -> tuple[int, int]:
-        """
-        Get the movement direction.
+        """Get the movement direction.
 
         Returns:
             Direction as (row_delta, col_delta)
@@ -75,13 +70,10 @@ REVERSE_ACTIONS: dict[GridAction, GridAction] = {
 
 
 class GridState(State):
-    """
-    Grid world state representing agent position.
-    """
+    """Grid world state representing agent position."""
 
     def __init__(self, position: Coordinate):
-        """
-        Initialize with agent position.
+        """Initialize with agent position.
 
         Args:
             position: Agent's (row, col) coordinate
@@ -106,8 +98,7 @@ class GridState(State):
 
 
 class GridWorld(World[GridAction, GridState]):
-    """
-    2D grid environment with obstacles and destinations.
+    """2D grid environment with obstacles and destinations.
 
     Grid values: 0=traversable, 1=obstacle
     """
@@ -120,8 +111,7 @@ class GridWorld(World[GridAction, GridState]):
         actions: list[GridAction] | None = None,
         action_prob_matrix: list[list[float]] | None = None,
     ):
-        """
-        Initialize the grid environment.
+        """Initialize the grid environment.
 
         Args:
             grid: Environment matrix (0=empty, 1=obstacle)
@@ -163,6 +153,8 @@ class GridWorld(World[GridAction, GridState]):
 
         # Set up action probability matrix for stochastic actions
         n_actions = len(self.actions)
+        print(f"{action_prob_matrix=}")
+
         if action_prob_matrix is None:
             # Default to deterministic actions (identity matrix)
             self.action_prob_matrix = [
@@ -193,11 +185,15 @@ class GridWorld(World[GridAction, GridState]):
             ]
 
     def set_reward_policy(self, reward_policy: RewardPolicy) -> None:
+        """Sets the reward policy for the grid environment.
+
+        Args:
+            reward_policy: The reward policy to be used
+        """
         self.reward_policy = reward_policy
 
     def shape(self) -> tuple[int, int]:
-        """
-        Get grid dimensions.
+        """Get grid dimensions.
 
         Returns:
             (rows, columns)
@@ -205,8 +201,7 @@ class GridWorld(World[GridAction, GridState]):
         return (len(self.grid), len(self.grid[0]) if self.grid else 0)
 
     def get_destination_coordinates(self) -> list[Coordinate]:
-        """
-        Returns all destination coordinates.
+        """Returns all destination coordinates.
 
         Returns:
             list: List of destination coordinates (tuples)
@@ -214,8 +209,7 @@ class GridWorld(World[GridAction, GridState]):
         return self.destinations
 
     def is_destination(self, coordinate: Coordinate) -> bool:
-        """
-        Checks if a coordinate is a destination.
+        """Checks if a coordinate is a destination.
 
         Args:
             coordinate: A tuple (row, col) representing a position in the grid
@@ -226,8 +220,7 @@ class GridWorld(World[GridAction, GridState]):
         return coordinate in self.destinations
 
     def distance_to_dest(self, coord: Coordinate) -> float:
-        """
-        Returns the Manhattan distance from a coordinate to the nearest destination.
+        """Returns the Manhattan distance from a coordinate to the nearest destination.
 
         Args:
             coord: A tuple (row, col) representing a position in the grid
@@ -248,8 +241,7 @@ class GridWorld(World[GridAction, GridState]):
         return min(distances)
 
     def is_valid_position(self, coord: Coordinate) -> bool:
-        """
-        Checks if a coordinate is a valid position (within bounds and not an obstacle).
+        """Checks if a coordinate is a valid position (within bounds and not an obstacle).
 
         Args:
             coord: A tuple (row, col) representing a position in the grid
@@ -268,8 +260,7 @@ class GridWorld(World[GridAction, GridState]):
         return self.grid[row][col] == 0
 
     def _get_new_position(self, position: Coordinate, action: GridAction) -> Coordinate:
-        """
-        Calculate the new position after taking an action.
+        """Calculate the new position after taking an action.
 
         Args:
             position: The current position
@@ -284,8 +275,7 @@ class GridWorld(World[GridAction, GridState]):
         return (row + row_delta, col + col_delta)
 
     def effective_action(self, intended_action: GridAction) -> GridAction:
-        """
-        Transform an intended action into an effective action based on the
+        """Transform an intended action into an effective action based on the
         action probability matrix.
 
         Args:
@@ -295,8 +285,7 @@ class GridWorld(World[GridAction, GridState]):
             The action that is actually executed
         """
         # Get the index of the intended action
-        action_index = self.action_to_index.get(intended_action)
-        if action_index is None:
+        if (action_index := self.action_to_index.get(intended_action)) is None:
             raise ValueError(f"Unknown action: {intended_action}")
 
         # Get the probability distribution for this action
@@ -308,14 +297,13 @@ class GridWorld(World[GridAction, GridState]):
         return self.actions[sampled_index]
 
     def apply_transition(
-        self, state: GridState, intended_action: GridAction
+        self, state: GridState, action: GridAction
     ) -> tuple[GridState, float]:
-        """
-        Apply an action to a state to get a new state and reward.
+        """Apply an action to a state to get a new state and reward.
 
         Args:
             state: The current state
-            action: The action to apply
+            action: The intended action to apply
 
         Returns:
             A tuple containing:
@@ -323,24 +311,23 @@ class GridWorld(World[GridAction, GridState]):
                 - The reward received for this transition
         """
         # Calculate the new position
-        action = self.effective_action(intended_action)
-        new_position = self._get_new_position(state.position, action)
+        eff_action = self.effective_action(action)
+        new_position = self._get_new_position(state.position, eff_action)
 
-        # Check if the new position is valid
-        if self.is_valid_position(new_position):
-            new_state = GridState(new_position)
-        else:
-            # If invalid, stay in the same position
-            new_state = GridState(state.position)
+        # Check if the new position is valid. If valid , continue otherwise stays
+        new_state = (
+            GridState(new_position)
+            if self.is_valid_position(new_position)
+            else GridState(state.position)
+        )
 
         # Calculate the reward using the reward policy
-        reward = self.reward_policy.get_reward(state, intended_action, new_state)
+        reward = self.reward_policy.get_reward(state, action, new_state)
 
         return new_state, reward
 
     def is_terminal(self, state: GridState) -> bool:
-        """
-        Check if a state is terminal (at a destination).
+        """Check if a state is terminal (at a destination).
 
         Args:
             state: The state to check
@@ -351,8 +338,7 @@ class GridWorld(World[GridAction, GridState]):
         return self.is_destination(state.position)
 
     def get_legal_actions(self, state: GridState) -> list[GridAction]:
-        """
-        Get all legal actions from a given state.
+        """Get all legal actions from a given state.
 
         Args:
             state: The current state
@@ -363,8 +349,7 @@ class GridWorld(World[GridAction, GridState]):
         return self.actions.copy()
 
     def get_initial_state(self, start_position: Coordinate) -> GridState:
-        """
-        Get the initial state of the world based on a starting position.
+        """Get the initial state of the world based on a starting position.
 
         Args:
             start_position: The starting position for the agent
@@ -380,8 +365,7 @@ class GridWorld(World[GridAction, GridState]):
 
 
 class DefaultGridRewardPolicy(RewardPolicy[GridAction, GridState]):
-    """
-    Distance-based reward policy for GridWorld.
+    """Distance-based reward policy for GridWorld.
 
     Rewards:
     - Positive for decreasing distance to goal
@@ -399,8 +383,7 @@ class DefaultGridRewardPolicy(RewardPolicy[GridAction, GridState]):
         same_distance_penalty: float = -5,
         goal_reward: float = 500.0,
     ):
-        """
-        Initialize the default grid reward policy.
+        """Initialize the default grid reward policy.
 
         Args:
             grid_world: The GridWorld environment
@@ -418,8 +401,7 @@ class DefaultGridRewardPolicy(RewardPolicy[GridAction, GridState]):
     def get_reward(
         self, source: GridState, action: GridAction, destination: GridState
     ) -> float:
-        """
-        Calculate the reward for a transition based on distance changes and goal achievement.
+        """Calculate the reward for a transition based on distance changes and goal achievement.
 
         Args:
             source: The source state
@@ -441,9 +423,10 @@ class DefaultGridRewardPolicy(RewardPolicy[GridAction, GridState]):
         if new_distance < old_distance:
             # Distance decreased - positive reward
             return self.decrease_distance_reward
-        elif new_distance > old_distance:
+
+        if new_distance > old_distance:
             # Distance increased - negative reward
             return self.increase_distance_penalty
-        else:
-            # Distance stayed the same - small negative reward
-            return self.same_distance_penalty
+
+        # Distance stayed the same - small negative reward
+        return self.same_distance_penalty

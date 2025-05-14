@@ -1,5 +1,4 @@
-"""
-Monte Carlo Tree Search (MCTS) Policy Implementation.
+"""Monte Carlo Tree Search (MCTS) Policy Implementation.
 
 This module provides an implementation of a policy that uses Monte Carlo Tree Search
 to determine optimal actions in sequential decision-making problems. The policy
@@ -16,7 +15,7 @@ from typing import Generic, TypeVar
 
 from policy import Policy
 from environment_model import Action, State, World
-from mcts import MCTS, MCTSStateNode, MCTSActionNode
+from mcts import MCTS
 
 # Type variables for generic typing
 A = TypeVar("A", bound=Action)
@@ -24,8 +23,7 @@ S = TypeVar("S", bound=State)
 
 
 class MCTSPolicy(Generic[A, S], Policy[A, S]):
-    """
-    A policy that uses Monte Carlo Tree Search to determine actions.
+    """A policy that uses Monte Carlo Tree Search to determine actions.
 
     This policy adapts the generic MCTS algorithm to work with any
     environment that implements the World interface.
@@ -67,6 +65,7 @@ class MCTSPolicy(Generic[A, S], Policy[A, S]):
     def get_next_action(
         self,
         step: int | None = None,
+        state: State | None = None,
         previous_state: S | None = None,
         previous_action: A | None = None,
     ) -> A:
@@ -77,17 +76,16 @@ class MCTSPolicy(Generic[A, S], Policy[A, S]):
 
         Args:
             step: Current step number in the episode
-            previous_state: The previous state of the environment
+            state: The current state
+            previous_state: The previous state of the environment (ignored)
             previous_action: The previous action taken
 
         Returns:
             The best action to take according to MCTS
         """
-        if (
-            previous_action is not None
-            and self.mcts.get_current_root() != previous_state
-        ):
-            self.mcts.update_root(new_state=previous_state, action=previous_action)
+        # Check if new root needs to be defined
+        if previous_action is not None and self.mcts.get_current_root() != state:
+            self.mcts.update_root(new_state=state, action=previous_action)
 
         # Use MCTS to search for the best action
         return self.mcts.search(step)

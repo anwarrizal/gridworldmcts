@@ -1,18 +1,19 @@
 {
   "max_steps": 300,
-  "num_simulations": 5000,
-  "exploration_weight": 500.0,
+  "num_simulations": 1000,
+  "exploration_weight": 50.0,
   "max_rollout_depth": 300,
-  "decrease_distance_reward": 2.0,
-  "increase_distance_penalty": -30.0,
-  "same_distance_penalty": -5.0,
-  "goal_reward": 1000.0,
+  "decrease_distance_reward": 0.5,
+  "increase_distance_penalty": -3.0,
+  "same_distance_penalty": -1.0,
+  "goal_reward": 200.0,
   "grid_file": "maze.txt",
+  "prob_matrix_file": "prob_matrix.json",
   "seed": 42,
   "log_level": "INFO",
   "module_log_levels": {
     "src.gridworld_mcts": "INFO",
     "src.episode": "INFO",
-    "src.mcts": "INFO"
+    "src.mcts": "DEBUG"
   }
 }
