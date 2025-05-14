@@ -1,0 +1,140 @@
+[MAIN]
+load-plugins=pylint.extensions.docparams,
+        pylint.extensions.code_style,
+        pylint.extensions.private_import,
+        pylint.extensions.redefined_variable_type,
+        pylint.extensions.set_membership,
+        pylint.extensions.typing,
+        pylint.extensions.docstyle,
+        pylint.extensions.check_elif,
+        pylint.extensions.confusing_elif,
+        pylint.extensions.consider_refactoring_into_while_condition,
+        pylint.extensions.consider_ternary_expression,
+        pylint.extensions.bad_builtin,
+        pylint.extensions.dict_init_mutate,
+        pylint.extensions.for_any_all
+
+
+[MASTER]
+ignore-paths=cdk/imaging/imagedatastore/config/*,cdk/imaging/metadatastore/config/*
+
+
+[DESIGN]
+max-public-methods=30
+max-locals=35
+max-statements=50
+max-module-lines=1500
+max-attributes=30
+
+[SIMILARITIES]
+min-similarity-lines=6
+
+# Ignore comments when computing similarities.
+ignore-comments=yes
+
+# Ignore docstrings when computing similarities.
+ignore-docstrings=yes
+
+# Ignore imports when computing similarities.
+ignore-imports=yes
+
+
+[MESSAGES CONTROL]
+disable=too-many-arguments,
+        c-extension-no-member,
+        logging-fstring-interpolation,
+        import-error,
+        too-few-public-methods,
+        too-many-ancestors,
+        unnecessary-lambda-assignment,
+        consider-alternative-union-syntax,
+        too-many-positional-arguments
+
+
+[FORMAT]
+
+# Maximum number of characters on a single line.
+max-line-length=120
+
+# Regexp for a line that is allowed to be longer than the limit.
+ignore-long-lines=(?x)(
+  ^\s*(\#\ )?<?https?://\S+>?$|
+  ^\s*(from\s+\S+\s+)?import\s+.+$|
+  ^\s*.*"arn:aws:.+| # allow long ARN
+  ^\s*.*f"arn:aws:.+| # allow long ARN
+  ^\s*.*f"s3://.+|
+  ^\s*.*"s3://.+)
+# Allow the body of an if to be on the same line as the test if there is no
+# else.
+single-line-if-stmt=yes
+
+# Maximum number of lines in a module
+max-module-lines=99999
+
+#indent-string='    '
+
+# Number of spaces of indent required inside a hanging  or continued line.
+indent-after-paren=4
+
+# Expected format of line ending, e.g. empty (any line ending), LF or CRLF.
+expected-line-ending-format=
+
+[VARIABLES]
+
+init-import=no
+
+dummy-variables-rgx=^\*{0,2}(_$|unused_|dummy_)
+
+additional-builtins=
+
+# List of strings which can identify a callback function by name. A callback
+# name must start or end with one of those strings.
+callbacks=cb_,_cb
+
+# List of qualified module names which can have objects that can redefine
+# builtins.
+redefining-builtins-modules=six,six.moves,past.builtins,future.builtins,functools
+
+
+[LOGGING]
+
+# Logging modules to check that the string format arguments are in logging
+# function parameter format
+logging-modules=logging,absl.logging,tensorflow.io.logging
+
+[IMPORTS]
+
+# Deprecated modules which should not be used, separated by a comma
+deprecated-modules=regsub,
+                   TERMIOS,
+                   Bastion,
+                   rexec,
+                   sets
+
+[CLASSES]
+
+# List of method names used to declare (i.e. assign) instance attributes.
+defining-attr-methods=__init__,
+                      __new__,
+                      setUp
+
+exclude-protected=_asdict,
+                  _fields,
+                  _replace,
+                  _source,
+                  _make
+
+# List of valid names for the first argument in a class method.
+valid-classmethod-first-arg=cls,
+                            class_
+
+# List of valid names for the first argument in a metaclass class method.
+valid-metaclass-classmethod-first-arg=mcs
+
+
+[EXCEPTIONS]
+
+# Exceptions that will emit a warning when being caught. Defaults to
+overgeneral-exceptions=builtins.StandardError,
+                       builtins.Exception,
+                       builtins.BaseException
