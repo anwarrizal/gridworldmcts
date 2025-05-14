@@ -20,7 +20,10 @@ from environment_model import State, Action, World
 from policy import Policy
 from random_policy import RandomMinHeuristicPolicy
 
+# Module logger
 logger = logging.getLogger(__name__)
+# Default to disabled (parent logger will control it)
+logger.setLevel(logging.NOTSET)
 
 # Type variables for generic typing
 A = TypeVar("A", bound=Action)
@@ -285,6 +288,7 @@ class MCTS(Generic[A, S]):
             The best action to take
         """
         state = self.root
+        logger.info(f"To run {self.num_simulations} simulations")
         # Run simulations
         for i in range(self.num_simulations):
             logger.debug(f"---- Simulation {i} -----")
@@ -314,7 +318,13 @@ class MCTS(Generic[A, S]):
             )
 
         # Select the best action based on visit count instead of ucb1
-        result = max(self.root.child_actions.items(), key=lambda x: x[1].visits)[0]
+        result, result_node = max(
+            self.root.child_actions.items(), key=lambda x: x[1].visits
+        )
+        ucb1_value = result_node.get_ucb1_value(self.exploration_weight)[0]
+        logger.info(
+            f"{{'selected_action':'{result.name()}','visits':{result_node.visits},'ucb1':{ucb1_value:.2f} }}"
+        )
         return result
 
     def _select_and_expand(

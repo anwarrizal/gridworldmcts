@@ -40,26 +40,42 @@ root.addHandler(console_handler)
 # Default logger for this module
 logger = logging.getLogger(__name__)
 
-def setup_logging(log_level):
+
+def setup_logging(log_level, module_levels=None):
     """
     Configure logging with the specified log level.
-    
+
     Args:
-        log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) for root logger
+        module_levels: Dictionary mapping module names to their log levels
     """
     # Convert string to logging level constant
     numeric_level = getattr(logging, log_level.upper(), None)
     if not isinstance(numeric_level, int):
         raise ValueError(f"Invalid log level: {log_level}")
-    
+
     # Set root logger level
     root.setLevel(numeric_level)
-    
+
     # Set console handler level
     for handler in root.handlers:
         handler.setLevel(numeric_level)
-    
-    logger.info(f"Log level set to {log_level}")
+
+    # Set module-specific log levels if provided
+    if module_levels:
+        for module_name, module_level in module_levels.items():
+            module_numeric_level = getattr(logging, module_level.upper(), None)
+            if not isinstance(module_numeric_level, int):
+                logger.warning(
+                    f"Invalid log level for module {module_name}: {module_level}"
+                )
+                continue
+
+            module_logger = logging.getLogger(module_name)
+            module_logger.setLevel(module_numeric_level)
+            logger.info(f"Log level for module {module_name} set to {module_level}")
+
+    logger.info(f"Root log level set to {log_level}")
 
 
 def load_config(config_file):
@@ -73,10 +89,10 @@ def load_config(config_file):
         Dictionary with configuration parameters
     """
     default_config = {
-        "max_steps": 100,
-        "num_simulations": 60,
+        "max_steps": 300,
+        "num_simulations": 6000,
         "exploration_weight": 500.0,
-        "max_rollout_depth": 20,
+        "max_rollout_depth": 300,
         "decrease_distance_reward": 1.0,
         "increase_distance_penalty": -50.0,
         "same_distance_penalty": -10.0,
@@ -84,6 +100,11 @@ def load_config(config_file):
         "grid_file": None,
         "seed": None,
         "log_level": "INFO",
+        "module_log_levels": {
+            "src.gridworld_mcts": "INFO",
+            "src.episode": "INFO",
+            "src.mcts": "INFO",
+        },
     }
 
     if config_file and os.path.exists(config_file):
@@ -248,7 +269,7 @@ def visualize_path(
     # Print the visualization with 0,0 at the bottom left
     logger.info("Grid World Path:")
     for row in reversed(vis_grid):  # Reverse the rows to put 0,0 at the bottom
-        logger.info("  ".join(str(cell) for cell in row))
+        logger.info(" ".join(str(cell) for cell in row))
 
 
 def parse_arguments():
@@ -290,11 +311,29 @@ def parse_arguments():
     )
     parser.add_argument("--seed", type=int, help="Random seed for reproducibility")
     parser.add_argument(
-        "--log-level", 
-        type=str, 
+        "--log-level",
+        type=str,
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Set the logging level"
+        help="Set the root logging level",
+    )
+    parser.add_argument(
+        "--log-gridworld-mcts",
+        type=str,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set logging level for gridworld_mcts module",
+    )
+    parser.add_argument(
+        "--log-episode",
+        type=str,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set logging level for episode module",
+    )
+    parser.add_argument(
+        "--log-mcts",
+        type=str,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set logging level for mcts module",
     )
 
     return parser.parse_args()
@@ -334,9 +373,20 @@ def main():
     if args.seed is not None:
         config["seed"] = args.seed
 
-    # Set up logging with the specified log level
-    setup_logging(config["log_level"])
-    
+    # Handle module-specific log levels
+    if not "module_log_levels" in config:
+        config["module_log_levels"] = {}
+
+    if args.log_gridworld_mcts is not None:
+        config["module_log_levels"]["src.gridworld_mcts"] = args.log_gridworld_mcts
+    if args.log_episode is not None:
+        config["module_log_levels"]["src.episode"] = args.log_episode
+    if args.log_mcts is not None:
+        config["module_log_levels"]["src.mcts"] = args.log_mcts
+
+    # Set up logging with the specified log level and module-specific levels
+    setup_logging(config["log_level"], config.get("module_log_levels", {}))
+
     # Log the configuration
     logger.info(f"Running with configuration: {config}")
 
@@ -369,7 +419,6 @@ def main():
         destinations = [(9, 9)]
         start_position = (0, 0)
 
-    logger.info("Running GridWorld with Monte Carlo Tree Search...")
     grid_world, episode = prepare_gridworld_with_mcts_episode(
         grid_matrix=grid_matrix,
         destinations=destinations,
@@ -392,6 +441,7 @@ def main():
     )
 
     # Run the episode
+    logger.info("Running GridWorld with Monte Carlo Tree Search...")
     success, steps, rewards, path = episode.run(max_steps=config["max_steps"])
 
     logger.info("==============================")

@@ -6,10 +6,14 @@ Simulates agent-environment interactions, tracking states, actions, and rewards.
 
 import logging
 import sys
+import time
 from environment_model import Action, State, World
 from policy import Policy
 
+# Module logger
 logger = logging.getLogger(__name__)
+# Default to disabled (parent logger will control it)
+logger.setLevel(logging.NOTSET)
 
 
 class Episode:
@@ -50,6 +54,7 @@ class Episode:
         Returns:
             (success, steps_taken, total_reward, action_state_path)
         """
+        episode_start_time = time.time()
         total_rewards = 0.0
         state = self.initial_state
         total_steps = 0
@@ -63,6 +68,8 @@ class Episode:
             logger.info(
                 f"---------------------- STEP {total_steps} ----------------------"
             )
+            step_start_time = time.time()
+
             # Get the next action from the policy
             action = self.policy.get_next_action(total_steps, state, previous_action)
 
@@ -85,7 +92,17 @@ class Episode:
             # Add the action and new state to the path
             path.append((action, state))
 
-            logger.info(f"Append {action.name()}/{state.name()}")
+            # Calculate and log step time
+            step_time = time.time() - step_start_time
+            logger.info(
+                f"{{ 'action':'{action.name()}','state':{state.name()},'rewards':{reward},'total_rewards':{total_rewards},'step time':{step_time:.4f}s }}"
+            )
+
+        # Calculate and log total episode time
+        episode_time = time.time() - episode_start_time
+        logger.info(
+            f"Episode completed in {episode_time:.4f}s, {total_steps} steps, avg {episode_time/max(1, total_steps):.4f}s per step"
+        )
 
         # Return success status, steps taken, total rewards, and the path
         return self.world.is_terminal(state), total_steps, total_rewards, path

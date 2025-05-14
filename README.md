@@ -71,7 +71,13 @@ Create a JSON configuration file (e.g., `config.json`):
   "goal_reward": 500.0,
   "max_steps": 200,
   "grid_file": "maze.txt",
-  "seed": 42
+  "seed": 42,
+  "log_level": "INFO",
+  "module_log_levels": {
+    "src.gridworld_mcts": "INFO",
+    "src.episode": "WARNING",
+    "src.mcts": "DEBUG"
+  }
 }
 ```
 
@@ -100,7 +106,10 @@ python src/gridworld_mcts.py --config config.json --num-simulations 2000
 - `--same-penalty`: Penalty for maintaining same distance
 - `--goal-reward`: Reward for reaching the goal
 - `--seed`: Random seed for reproducibility
-- `--log-level`: Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- `--log-level`: Set root logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- `--log-gridworld-mcts`: Set logging level for gridworld_mcts module
+- `--log-episode`: Set logging level for episode module
+- `--log-mcts`: Set logging level for mcts module
 
 ## License
 
