@@ -47,7 +47,7 @@ class RandomMinHeuristicPolicy(Generic[A, S], Policy[A, S]):
     def get_next_action(
         self,
         step: int | None = None,
-        state: State | None = None,
+        state: S | None = None,
         previous_state: S | None = None,
         previous_action: A | None = None,
     ) -> A:
