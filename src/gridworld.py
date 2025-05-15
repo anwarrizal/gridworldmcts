@@ -153,7 +153,6 @@ class GridWorld(World[GridAction, GridState]):
 
         # Set up action probability matrix for stochastic actions
         n_actions = len(self.actions)
-        print(f"{action_prob_matrix=}")
 
         if action_prob_matrix is None:
             # Default to deterministic actions (identity matrix)
