@@ -12,8 +12,8 @@
   "seed": 42,
   "log_level": "INFO",
   "module_log_levels": {
-    "src.gridworld_mcts": "INFO",
-    "src.episode": "INFO",
-    "src.mcts": "DEBUG"
+    "gridworld_mcts": "INFO",
+    "episode": "INFO",
+    "mcts": "DEBUG"
   }
 }
